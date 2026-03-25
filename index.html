@@ -1,0 +1,934 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website Performance Dashboard — ROLLER Digital Marketing</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<style>
+:root {
+  --primary: #4F46E5; --primary-light: #818CF8; --accent: #06B6D4;
+  --success: #10B981; --warning: #F59E0B; --danger: #EF4444;
+  --bg: #F8FAFC; --card: #FFFFFF; --text: #1E293B; --text-sec: #64748B;
+  --border: #E2E8F0; --shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:var(--bg); color:var(--text); }
+
+.header {
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  color:#fff; padding:24px 32px; display:flex; justify-content:space-between; align-items:center;
+}
+.header h1 { font-size:22px; font-weight:700; }
+.header .sub { font-size:13px; opacity:.85; margin-top:2px; }
+.header-right { display:flex; gap:12px; align-items:center; }
+.header-badge { font-size:12px; background:rgba(255,255,255,.15); padding:6px 14px; border-radius:20px; }
+
+.controls {
+  background:var(--card); border-bottom:1px solid var(--border); padding:14px 32px;
+  display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+}
+.controls label { font-size:11px; color:var(--text-sec); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+.controls select, .controls button {
+  padding:7px 14px; border:1px solid var(--border); border-radius:8px; font-size:13px;
+  background:var(--card); color:var(--text); cursor:pointer;
+}
+.controls button.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+.container { max-width:1440px; margin:0 auto; padding:24px 32px; }
+
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:14px; margin-bottom:24px; }
+.kpi { background:var(--card); border-radius:12px; padding:18px; box-shadow:var(--shadow); border-left:4px solid var(--primary); }
+.kpi .label { font-size:11px; color:var(--text-sec); text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
+.kpi .val { font-size:26px; font-weight:700; margin-top:4px; }
+.kpi .delta { font-size:12px; margin-top:3px; }
+.kpi .delta.up { color:var(--success); }
+.kpi .delta.down { color:var(--danger); }
+.kpi:nth-child(2) { border-left-color:#06B6D4; }
+.kpi:nth-child(3) { border-left-color:#10B981; }
+.kpi:nth-child(4) { border-left-color:#F59E0B; }
+.kpi:nth-child(5) { border-left-color:#EF4444; }
+.kpi:nth-child(6) { border-left-color:#8B5CF6; }
+.kpi:nth-child(7) { border-left-color:#EC4899; }
+.kpi:nth-child(8) { border-left-color:#14B8A6; }
+
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+.grid1 { display:grid; grid-template-columns:1fr; gap:20px; margin-bottom:24px; }
+.card { background:var(--card); border-radius:12px; padding:24px; box-shadow:var(--shadow); }
+.card h3 { font-size:14px; font-weight:600; margin-bottom:14px; color:var(--text); }
+.card canvas { max-height:340px; }
+
+.funnel-table { width:100%; border-collapse:collapse; font-size:13px; }
+.funnel-table th { text-align:left; padding:10px 14px; background:#F1F5F9; font-weight:600; color:var(--text-sec); font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+.funnel-table td { padding:10px 14px; border-bottom:1px solid var(--border); }
+.funnel-table tr:hover td { background:#F8FAFC; }
+.funnel-table .num { text-align:right; font-variant-numeric:tabular-nums; }
+.funnel-table .total-row { font-weight:700; background:#F1F5F9; }
+
+.section { display:none; }
+.section.active { display:block; }
+
+.tab-bar { display:flex; gap:0; margin-bottom:24px; background:var(--card); border-radius:12px; overflow:hidden; box-shadow:var(--shadow); }
+.tab-btn {
+  padding:12px 24px; font-size:13px; font-weight:500; color:var(--text-sec);
+  border:none; background:none; cursor:pointer; flex:1; text-align:center; transition:all .2s;
+  border-bottom:2px solid transparent;
+}
+.tab-btn:hover { color:var(--primary); background:#F8FAFC; }
+.tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); background:#EEF2FF; }
+
+.legend-note { font-size:11px; color:var(--text-sec); margin-top:8px; font-style:italic; }
+
+.notes-banner {
+  background:#FFFBEB; border:1px solid #FDE68A; border-radius:10px; padding:14px 20px;
+  margin-bottom:20px; font-size:12px; color:#92400E; line-height:1.6;
+}
+.notes-banner summary {
+  font-weight:600; font-size:13px; cursor:pointer; color:#92400E;
+}
+.notes-banner ul { margin:8px 0 0 18px; padding:0; }
+.notes-banner li { margin-bottom:4px; }
+
+.insight-card {
+  background:var(--card); border-radius:12px; padding:16px; box-shadow:var(--shadow);
+  border-left:4px solid var(--primary); display:flex; gap:16px; align-items:flex-start;
+}
+.insight-card.severity-high { border-left-color:var(--danger); }
+.insight-card.severity-medium { border-left-color:var(--warning); }
+.insight-card.severity-increase { border-left-color:var(--success); }
+.insight-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px; margin-bottom:24px; }
+.insight-icon { font-size:32px; flex-shrink:0; }
+.insight-content { flex:1; }
+.insight-title { font-size:14px; font-weight:600; color:var(--text); margin-bottom:6px; }
+.insight-detail { font-size:12px; color:var(--text-sec); line-height:1.5; margin-bottom:8px; }
+.insight-severity { display:inline-block; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; padding:4px 10px; border-radius:4px; background:#FEE2E2; color:#991B1B; }
+.insight-severity.medium { background:#FEF3C7; color:#92400E; }
+.insight-severity.increase { background:#DCFCE7; color:#166534; }
+.period-badge { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:12px; color:var(--text-sec); }
+.period-badge strong { color:var(--text); }
+.industry-table { width:100%; border-collapse:collapse; font-size:12px; }
+.industry-table th { text-align:left; padding:12px 14px; background:#F1F5F9; font-weight:600; color:var(--text-sec); font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+.industry-table td { padding:12px 14px; border-bottom:1px solid var(--border); }
+.industry-table tr:hover td { background:#F8FAFC; }
+
+@media (max-width:900px) {
+  .grid2 { grid-template-columns:1fr; }
+  .kpi-grid { grid-template-columns:repeat(2,1fr); }
+  .insight-grid { grid-template-columns:1fr; }
+  .container { padding:16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Website Performance Dashboard</h1>
+    <div class="sub">ROLLER — Digital Marketing</div>
+  </div>
+  <div class="header-right">
+    <span class="header-badge" id="dateRange"></span>
+  </div>
+</div>
+
+<div class="controls">
+  <div>
+    <label>From</label><br>
+    <select id="startMonth" onchange="applyFilters()"></select>
+  </div>
+  <div>
+    <label>To</label><br>
+    <select id="endMonth" onchange="applyFilters()"></select>
+  </div>
+  <div>
+    <label>Quick Select</label><br>
+    <select id="quickRange" onchange="applyQuickRange()">
+      <option value="">Custom</option>
+      <option value="ytd-2025" selected>2025 YTD</option>
+      <option value="2024">2024</option>
+      <option value="2026">2026</option>
+      <option value="all">All Time</option>
+    </select>
+  </div>
+  <div>
+    <label>Attribution</label><br>
+    <select id="touchFilter" onchange="applyFilters()">
+      <option value="last">Last Touch</option>
+      <option value="first">First Touch</option>
+    </select>
+  </div>
+</div>
+
+<div class="container">
+
+<details class="notes-banner" open>
+  <summary>Reporting Notes</summary>
+  <ul>
+    <li><strong>Excluded channels:</strong> "Other" and "Events" channels are excluded from all views in this dashboard.</li>
+    <li><strong>Data discrepancies:</strong> Total pipeline data may differ slightly from the CY26 Acquisition Model due to how we pull the Salesforce data. In order to get a complete view, we rely on Lead ID, Opportunity ID, and other fields to match up every record, so there are small discrepancies on some channels — but they are marginal.</li>
+    <li><strong>First touch attribution:</strong> All records (no Inbound filter) using Original Marketing Channel for MQLs. S2 first touch uses Original Marketing Channel sourced from Pipeline Data with Campaign via Opportunity ID.</li>
+    <li><strong>Last touch attribution:</strong> Source Mapped = Inbound, using Channel Mapped for both MQL and S2.</li>
+  </ul>
+</details>
+
+<!-- Tab navigation -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('insights', this)">Insights</button>
+  <button class="tab-btn" onclick="showTab('overview', this)">Overview</button>
+  <button class="tab-btn" onclick="showTab('trends', this)">Channel Trends</button>
+  <button class="tab-btn" onclick="showTab('funnel', this)">Full Funnel</button>
+  <button class="tab-btn" onclick="showTab('yoy', this)">YoY Comparison (YTD)</button>
+</div>
+
+<!-- INSIGHTS -->
+<div id="sec-insights" class="section active">
+  <div class="period-badge" id="periodBadge"></div>
+  <div class="insight-grid" id="insightCards"></div>
+  <div class="card">
+    <h3>Industry Insights & Trends</h3>
+    <div style="overflow-x:auto;"><table class="industry-table" id="industryTable"></table></div>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<div id="sec-overview" class="section">
+  <div class="kpi-grid" id="kpiGrid"></div>
+  <div class="grid2">
+    <div class="card"><h3>Traffic by Channel</h3><canvas id="trafficPie"></canvas></div>
+    <div class="card"><h3>MQL by Channel</h3><canvas id="mqlPie"></canvas></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Traffic by Channel</h3>
+      <div style="overflow-x:auto;"><table class="funnel-table" id="trafficTable"></table></div>
+    </div>
+    <div class="card">
+      <h3>MQLs by Channel</h3>
+      <div style="overflow-x:auto;"><table class="funnel-table" id="mqlTable"></table></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Traffic by Region</h3><canvas id="regionPie"></canvas></div>
+    <div class="card">
+      <h3>Traffic by Region</h3>
+      <div style="overflow-x:auto;"><table class="funnel-table" id="regionTable"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- TRENDS -->
+<div id="sec-trends" class="section">
+  <div class="grid1">
+    <div class="card"><h3>Monthly New Users by Channel</h3><canvas id="trafficTrend"></canvas></div>
+  </div>
+  <div class="grid1">
+    <div class="card"><h3>Monthly Total Traffic</h3><canvas id="totalTrend"></canvas></div>
+  </div>
+  <div class="grid1">
+    <div class="card"><h3>Channel Share Over Time (%)</h3><canvas id="channelShareTrend"></canvas></div>
+  </div>
+  <div class="grid1">
+    <div class="card"><h3>Monthly Visit → MQL Conversion Rate by Channel</h3><canvas id="convRateTrend"></canvas></div>
+  </div>
+  <div class="grid1">
+    <div class="card"><h3>Monthly Overall Visit → MQL Conversion Rate</h3><canvas id="convRateTotal"></canvas></div>
+  </div>
+  <div class="grid1">
+    <div class="card">
+      <h3>Top 10 Source / Medium</h3>
+      <div style="overflow-x:auto;"><table class="funnel-table" id="srcMedTable"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- FUNNEL -->
+<div id="sec-funnel" class="section">
+  <div class="grid1">
+    <div class="card">
+      <h3>Full Funnel — First Touch Attribution</h3>
+      <div class="legend-note" style="margin-bottom:10px;">All records (no Inbound filter), using Original Marketing Channel for MQLs and Pipeline Data lookup for S2.</div>
+      <div style="overflow-x:auto;">
+        <table class="funnel-table" id="funnelTableFirst"></table>
+      </div>
+    </div>
+  </div>
+  <div class="grid1">
+    <div class="card">
+      <h3>Full Funnel — Last Touch Attribution</h3>
+      <div class="legend-note" style="margin-bottom:10px;">Source Mapped = Inbound, using Channel Mapped for both MQL and S2.</div>
+      <div style="overflow-x:auto;">
+        <table class="funnel-table" id="funnelTableLast"></table>
+      </div>
+    </div>
+  </div>
+  <div class="grid1">
+    <div class="card"><h3>Funnel Conversion Rates by Channel</h3><canvas id="funnelChart"></canvas></div>
+  </div>
+</div>
+
+<!-- YoY -->
+<div id="sec-yoy" class="section">
+  <div class="grid1">
+    <div class="card">
+      <h3 id="yoyTableTitle">Year-over-Year Comparison — YTD (Jan–Mar)</h3>
+      <div class="legend-note" style="margin-bottom:10px;" id="yoyNote">Comparing the same months across years for a fair like-for-like comparison. Uses the latest available 2026 months (Jan–Mar) as the baseline period.</div>
+      <div style="overflow-x:auto;">
+        <table class="funnel-table" id="yoyTable"></table>
+      </div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Traffic YTD by Channel</h3><canvas id="yoyTrafficChart"></canvas></div>
+    <div class="card"><h3>MQL YTD by Channel</h3><canvas id="yoyMqlChart"></canvas></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Monthly Traffic Trend — Year Overlay</h3><canvas id="yoyTrafficLine"></canvas></div>
+    <div class="card"><h3>Monthly MQL Trend — Year Overlay</h3><canvas id="yoyMqlLine"></canvas></div>
+  </div>
+  <div class="grid1">
+    <div class="card"><h3>Monthly Visit → MQL Conversion Rate — Year Overlay</h3><canvas id="yoyCvrLine"></canvas></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const D = {"months": ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03"], "channels": ["Direct", "Paid Search", "Organic", "Display", "Referral", "Email", "AI Search"], "traffic": {"by_channel": {"Direct": [9189, 8538, 7805, 11337, 10583, 13469, 17261, 18162, 19735, 18544, 17948, 12991, 16123, 12268, 13618, 12274, 13577, 12480, 9518, 8913, 13067, 9935, 14304, 13197, 13579, 36108, 134904], "Paid Search": [4816, 4513, 3132, 2714, 4526, 3552, 3443, 12705, 11825, 7912, 9188, 4898, 4592, 8683, 14384, 15320, 10567, 6780, 10925, 14539, 10979, 8118, 8483, 7093, 5110, 4772, 3363], "Organic": [14194, 12990, 11570, 19911, 20778, 20991, 25202, 18042, 17775, 16579, 13631, 12684, 15790, 13806, 13266, 10895, 13381, 11163, 11757, 11708, 11525, 11335, 10017, 8316, 9470, 7605, 4610], "Display": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12952, 27504, 10493, 8317, 96417, 152074, 10475, 4850, 2154, 2082, 1240, 598], "Referral": [28779, 26675, 16415, 16902, 16620, 23871, 35875, 17949, 13493, 14509, 12158, 14338, 16010, 12808, 14553, 13615, 12027, 12723, 16326, 13530, 10633, 10608, 12984, 15168, 14592, 7028, 3942], "Email": [9479, 9682, 6959, 6622, 5386, 8717, 14764, 3633, 1085, 1344, 825, 1289, 385, 389, 715, 976, 1243, 689, 503, 552, 690, 497, 507, 285, 277, 170, 137], "AI Search": [9, 3, 12, 12, 13, 23, 33, 41, 70, 73, 108, 121, 165, 197, 186, 182, 231, 186, 180, 238, 326, 274, 255, 194, 201, 148, 142], "Other": [3676, 2480, 2054, 2304, 1999, 2517, 2642, 1626, 1279, 1183, 2292, 1858, 1539, 4652, 579, 773, 2236, 1366, 471, 584, 614, 874, 1210, 960, 640, 706, 439]}, "totals": {"Direct": 499427, "Paid Search": 206932, "Organic": 368991, "Display": 329156, "Referral": 424131, "Email": 77800, "AI Search": 3623, "Other": 43553}, "monthly_total": [70142, 64881, 47947, 59802, 59905, 73140, 99220, 72158, 65262, 60144, 56150, 48179, 54604, 52803, 57301, 66987, 80766, 55880, 57997, 146481, 199908, 52116, 52610, 47367, 45951, 57777, 148135], "by_region": {"2024-01": {"EMEA": 22053, "APAC": 14609, "AMER": 33385, "Other": 95}, "2024-02": {"AMER": 30334, "EMEA": 23833, "APAC": 10672, "Other": 42}, "2024-03": {"AMER": 33377, "EMEA": 3411, "APAC": 10958, "Other": 201}, "2024-04": {"AMER": 31177, "APAC": 12369, "EMEA": 15955, "Other": 301}, "2024-05": {"AMER": 28792, "EMEA": 17723, "APAC": 13217, "Other": 173}, "2024-06": {"EMEA": 20137, "AMER": 38176, "APAC": 14652, "Other": 175}, "2024-07": {"AMER": 53250, "EMEA": 26711, "APAC": 18959, "Other": 300}, "2024-08": {"EMEA": 18864, "AMER": 40510, "APAC": 12242, "Other": 542}, "2024-09": {"AMER": 33698, "EMEA": 18329, "APAC": 12496, "Other": 739}, "2024-10": {"AMER": 31996, "EMEA": 16693, "APAC": 10751, "Other": 704}, "2024-11": {"AMER": 33878, "EMEA": 12419, "APAC": 9234, "Other": 619}, "2024-12": {"AMER": 28468, "EMEA": 10916, "APAC": 8469, "Other": 326}, "2025-01": {"AMER": 33918, "EMEA": 12173, "APAC": 8320, "Other": 193}, "2025-02": {"AMER": 33856, "EMEA": 10904, "APAC": 7926, "Other": 117}, "2025-03": {"APAC": 7922, "AMER": 38143, "EMEA": 11000, "Other": 236}, "2025-04": {"APAC": 8542, "AMER": 47788, "EMEA": 10398, "Other": 259}, "2025-05": {"AMER": 57566, "APAC": 9843, "EMEA": 12978, "Other": 379}, "2025-06": {"AMER": 35756, "APAC": 8520, "EMEA": 11567, "Other": 37}, "2025-07": {"APAC": 9405, "AMER": 39551, "EMEA": 9011, "Other": 30}, "2025-08": {"APAC": 9864, "AMER": 127119, "EMEA": 9276, "Other": 222}, "2025-09": {"EMEA": 10351, "APAC": 12648, "AMER": 176867, "Other": 42}, "2025-10": {"APAC": 9481, "AMER": 35008, "EMEA": 7603, "Other": 24}, "2025-11": {"AMER": 33284, "APAC": 9920, "EMEA": 9368, "Other": 38}, "2025-12": {"AMER": 28899, "APAC": 10692, "EMEA": 7751, "Other": 25}, "2026-01": {"APAC": 10034, "AMER": 27630, "EMEA": 8267, "Other": 20}, "2026-02": {"AMER": 43226, "EMEA": 7882, "APAC": 6635, "Other": 34}, "2026-03": {"AMER": 139787, "EMEA": 4362, "APAC": 3890, "Other": 96}}, "region_by_month": {"AMER": [33385, 30334, 33377, 31177, 28792, 38176, 53250, 40510, 33698, 31996, 33878, 28468, 33918, 33856, 38143, 47788, 57566, 35756, 39551, 127119, 176867, 35008, 33284, 28899, 27630, 43226, 139787], "APAC": [14609, 10672, 10958, 12369, 13217, 14652, 18959, 12242, 12496, 10751, 9234, 8469, 8320, 7926, 7922, 8542, 9843, 8520, 9405, 9864, 12648, 9481, 9920, 10692, 10034, 6635, 3890], "EMEA": [22053, 23833, 3411, 15955, 17723, 20137, 26711, 18864, 18329, 16693, 12419, 10916, 12173, 10904, 11000, 10398, 12978, 11567, 9011, 9276, 10351, 7603, 9368, 7751, 8267, 7882, 4362], "Other": [95, 42, 201, 301, 173, 175, 300, 542, 739, 704, 619, 326, 193, 117, 236, 259, 379, 37, 30, 222, 42, 24, 38, 25, 20, 34, 96]}, "regions": ["AMER", "APAC", "EMEA", "Other"], "src_med_all": {"(direct) / (none)": [9189, 8538, 7805, 11337, 10583, 13468, 17256, 18157, 19722, 18536, 17942, 12988, 16121, 12264, 13607, 12270, 13575, 12479, 9515, 8912, 13065, 9915, 14270, 13172, 13558, 36087, 134881], "google / organic": [13429, 12241, 10843, 19100, 19993, 20160, 24378, 17421, 17253, 15915, 13049, 12141, 15197, 13291, 12686, 10378, 12722, 10520, 11164, 11098, 10855, 10744, 9462, 7830, 8980, 7126, 4288], "cm360 / cpm": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12952, 27504, 10493, 8317, 96417, 152074, 10475, 4850, 2154, 2082, 1240, 598], "google / cpc": [4505, 4157, 2851, 2449, 3760, 3175, 3165, 12303, 11487, 7495, 8841, 4677, 4429, 7702, 8432, 11566, 6869, 4793, 7605, 9503, 9334, 7469, 8362, 6994, 5024, 4663, 3311], "checkout / referral": [16097, 15996, 7916, 7615, 5872, 7402, 8087, 1622, 1006, 978, 893, 1134, 1204, 833, 920, 1377, 1377, 1872, 1971, 1137, 1401, 867, 380, 450, 385, 337, 113], "emails / (not set)": [9280, 9372, 6768, 6070, 4987, 8367, 14242, 3463, 801, 414, 321, 250, 300, 161, 312, 356, 375, 115, 125, 116, 86, 52, 42, 53, 61, 13, 21], "manage.roller.app / referral": [704, 596, 666, 1805, 2910, 4315, 5479, 4595, 4585, 6147, 2873, 2611, 3137, 2654, 2989, 3233, 1082, 908, 989, 795, 1032, 1438, 1772, 1522, 1609, 1375, 846], "ecom.roller.app / referral": [3076, 2919, 1727, 1452, 1319, 831, 1594, 1515, 1610, 1551, 1972, 2631, 2456, 1983, 2495, 1980, 2429, 2454, 3012, 3317, 2702, 2879, 3071, 4729, 4427, 21, 3], "checkout.roller.app / referral": [2729, 2118, 1157, 1113, 986, 1154, 2174, 1180, 935, 903, 901, 1263, 1194, 825, 916, 796, 1106, 1012, 2176, 1501, 1014, 942, 713, 808, 1034, 683, 346], "pdf / (not set)": [1388, 1220, 1185, 1163, 1022, 1317, 1659, 838, 725, 657, 1140, 1074, 749, 4416, 392, 405, 1720, 1110, 92, 30, 14, 3, 3, 1, 4, 0, 1], "checkout.haveablast.roller.app / referral": [1983, 1507, 1777, 1438, 1062, 984, 999, 893, 924, 789, 873, 771, 904, 712, 855, 525, 492, 533, 487, 479, 374, 427, 462, 382, 541, 383, 218], "facebook / paid": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1344, 1629, 1763, 993, 2460, 4636, 1530, 520, 26, 0, 0, 1, 0], "bing / organic": [419, 426, 406, 494, 530, 539, 575, 487, 427, 561, 486, 420, 488, 428, 490, 435, 537, 545, 498, 494, 553, 492, 446, 402, 373, 364, 235], "hs_email / email": [197, 303, 189, 447, 355, 345, 521, 166, 283, 745, 341, 1031, 83, 197, 342, 414, 556, 503, 323, 398, 563, 308, 424, 223, 211, 153, 108], "pos.roller.app / referral": [247, 140, 120, 388, 65, 102, 73, 429, 205, 238, 26, 68, 86, 24, 47, 37, 26, 34, 26, 23, 26, 34, 1597, 1746, 1384, 1294, 817], "zavazone.com / referral": [0, 0, 0, 0, 0, 231, 619, 498, 14, 12, 19, 503, 723, 550, 455, 374, 325, 480, 543, 487, 342, 311, 407, 483, 650, 497, 202], "waiver / referral": [0, 0, 0, 0, 86, 2788, 5079, 318, 18, 7, 5, 3, 1, 0, 0, 0, 1, 1, 2, 0, 0, 0, 0, 0, 1, 0, 0], "flipup-park.com / referral": [0, 0, 0, 0, 0, 519, 2257, 585, 1, 11, 9, 235, 631, 486, 644, 366, 397, 396, 1047, 466, 44, 0, 0, 0, 0, 0, 0], "announcekit.app / referral": [202, 260, 286, 329, 943, 572, 238, 483, 201, 129, 1182, 870, 477, 263, 219, 141, 46, 46, 47, 54, 13, 47, 76, 65, 35, 92, 54], "ecom.haveablast.roller.app / referral": [147, 151, 225, 238, 159, 211, 207, 176, 212, 222, 270, 389, 346, 348, 450, 241, 306, 383, 347, 244, 221, 184, 234, 231, 297, 3, 0], "l.instagram.com / referral": [1, 3, 2, 1, 1, 375, 1536, 689, 347, 354, 422, 355, 458, 366, 290, 116, 106, 132, 342, 124, 55, 37, 45, 40, 40, 29, 22], "linkedin.com / referral": [121, 132, 105, 133, 164, 115, 110, 224, 204, 153, 172, 283, 113, 96, 175, 212, 241, 204, 408, 310, 300, 346, 412, 316, 198, 358, 232], "linkedin / paid": [1, 0, 1, 2, 1, 7, 4, 3, 1, 1, 0, 4, 5, 707, 930, 1230, 1100, 474, 350, 38, 13, 34, 10, 1, 3, 2, 0], "bing / ppc": [245, 281, 198, 209, 238, 250, 214, 223, 256, 359, 292, 187, 27, 0, 0, 302, 613, 464, 486, 33, 11, 6, 2, 5, 2, 0, 1], "outbrain / paid": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3367, 413, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], "(unlinked SA360 account) / (unlinked SA360 account)": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 290, 518, 775, 717, 404, 514, 343], "rushba.com.ar / referral": [0, 0, 0, 0, 0, 191, 675, 195, 0, 0, 0, 93, 214, 226, 248, 105, 144, 172, 581, 242, 114, 50, 45, 41, 62, 53, 32], "checkout / (not set)": [413, 389, 198, 257, 306, 273, 305, 83, 61, 46, 54, 48, 42, 25, 49, 120, 129, 91, 97, 113, 56, 22, 7, 12, 13, 13, 6], "manage.haveablast.roller.app / referral": [60, 45, 64, 68, 67, 209, 267, 318, 251, 247, 42, 53, 63, 52, 53, 120, 54, 82, 88, 62, 95, 98, 168, 180, 130, 120, 58], "launchpad.roller.app / referral": [22, 18, 17, 18, 14, 241, 279, 225, 294, 272, 128, 104, 97, 98, 98, 78, 119, 143, 191, 124, 112, 89, 71, 52, 59, 37, 8], "cdn.embedly.com / referral": [48, 66, 74, 86, 105, 94, 154, 89, 132, 185, 111, 108, 130, 120, 186, 102, 77, 86, 69, 85, 158, 146, 104, 123, 115, 144, 104], "s0.2mdn.net / referral": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1416, 500, 5, 130, 388, 95, 280, 17, 5, 3, 1, 0], "pos.haveablast.roller.app / referral": [116, 59, 58, 57, 12, 13, 32, 102, 146, 123, 6, 5, 0, 3, 2, 6, 3, 7, 4, 5, 2, 11, 457, 436, 303, 273, 226], "pos2.roller.app / referral": [3, 8, 5, 23, 48, 95, 182, 322, 67, 44, 9, 17, 2, 18, 23, 1, 7, 5, 6, 2, 2, 9, 379, 420, 289, 269, 146], "adroll / adroll": [771, 515, 414, 79, 5, 5, 24, 64, 47, 9, 37, 31, 76, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "centralpark.world / referral": [0, 0, 0, 0, 0, 176, 1098, 222, 2, 0, 0, 103, 313, 62, 5, 6, 11, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0], "chatgpt.com / referral": [0, 0, 0, 0, 0, 1, 2, 14, 23, 42, 57, 66, 86, 98, 101, 92, 115, 101, 91, 112, 147, 145, 130, 85, 92, 73, 54], "google / ppc": [45, 63, 65, 53, 175, 52, 45, 172, 78, 57, 55, 30, 48, 35, 38, 71, 213, 48, 19, 14, 25, 24, 9, 7, 22, 22, 6], "manage.play.roller.app / referral": [11, 23, 22, 64, 51, 106, 93, 76, 86, 114, 119, 78, 104, 72, 93, 50, 25, 30, 12, 22, 38, 33, 36, 28, 35, 30, 21], "microsoft / ppc": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 236, 269, 109, 4, 0, 3, 286, 65, 64, 74, 85, 55, 74, 44], "m.facebook.com / referral": [18, 23, 16, 26, 15, 81, 33, 30, 16, 94, 17, 42, 62, 63, 34, 28, 28, 64, 37, 88, 19, 62, 84, 201, 146, 84, 17], "emails / organic": [236, 234, 213, 179, 151, 172, 137, 29, 8, 7, 1, 5, 14, 6, 3, 4, 5, 2, 4, 3, 1, 2, 2, 0, 1, 2, 2], "altitudebelgrano.com / referral": [0, 0, 0, 0, 0, 5, 10, 8, 13, 5, 5, 141, 297, 310, 433, 75, 2, 13, 5, 15, 9, 7, 3, 4, 5, 7, 2], "(not set)": [28, 25, 22, 54, 97, 48, 86, 63, 55, 27, 22, 20, 14, 13, 12, 38, 107, 21, 21, 149, 23, 152, 86, 65, 56, 27, 5], "yahoo / organic": [34, 31, 49, 56, 53, 57, 49, 56, 53, 48, 46, 53, 53, 44, 47, 39, 58, 44, 38, 55, 58, 46, 52, 42, 57, 62, 37], "nil.skyhighsports.com / referral": [0, 0, 0, 0, 0, 49, 89, 64, 1, 2, 3, 69, 98, 65, 100, 79, 39, 58, 72, 43, 47, 30, 43, 72, 56, 4, 0], "facebook.com / referral": [5, 5, 2, 2, 14, 17, 31, 47, 33, 49, 38, 24, 48, 37, 65, 28, 60, 51, 86, 91, 61, 50, 64, 49, 34, 48, 24], "checkout.landofnatura.com / referral": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 44, 83, 28, 8, 40, 53, 67, 107, 191, 298, 9, 0, 9, 68, 33, 0, 0], "tickets.scenicworld.com.au / referral": [56, 45, 55, 81, 24, 19, 33, 25, 34, 33, 41, 73, 71, 33, 49, 95, 24, 24, 32, 40, 27, 28, 13, 51, 28, 0, 0], "duckduckgo / organic": [47, 35, 32, 33, 30, 46, 50, 27, 24, 39, 36, 52, 29, 27, 26, 28, 43, 42, 46, 46, 42, 37, 32, 29, 49, 43, 38]}}, "mql_last": {"by_channel": {"Direct": [99, 102, 90, 101, 46, 118, 120, 109, 125, 109, 98, 79, 127, 116, 116, 128, 103, 90, 109, 107, 103, 123, 145, 114, 118, 136, 102], "Paid Search": [29, 16, 19, 17, 40, 62, 76, 142, 254, 154, 124, 86, 85, 103, 141, 247, 134, 72, 102, 129, 112, 72, 60, 79, 68, 54, 35], "Organic": [53, 31, 36, 48, 33, 48, 53, 55, 38, 41, 53, 46, 83, 74, 64, 59, 63, 43, 44, 50, 50, 30, 32, 25, 34, 20, 20], "Display": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Referral": [21, 18, 18, 17, 25, 9, 20, 25, 29, 26, 24, 17, 21, 18, 26, 27, 17, 16, 20, 15, 9, 17, 26, 15, 10, 4, 5], "Email": [22, 9, 10, 8, 12, 14, 11, 9, 5, 14, 15, 10, 4, 10, 8, 10, 7, 7, 4, 4, 12, 8, 12, 7, 8, 1, 5], "AI Search": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, "totals": {"Direct": 2933, "Paid Search": 2512, "Organic": 1226, "Display": 0, "Referral": 495, "Email": 246, "AI Search": 0}}, "mql_first": {"by_channel": {"Direct": [93, 94, 86, 98, 38, 92, 94, 74, 88, 73, 80, 55, 86, 81, 77, 105, 76, 65, 75, 73, 101, 110, 150, 111, 115, 119, 109], "Paid Search": [38, 24, 29, 28, 46, 82, 101, 185, 294, 180, 144, 104, 101, 141, 187, 269, 160, 94, 134, 160, 186, 88, 82, 86, 84, 67, 43], "Organic": [74, 50, 65, 74, 65, 75, 78, 66, 69, 73, 73, 72, 109, 85, 80, 78, 85, 67, 65, 72, 146, 38, 60, 34, 37, 25, 21], "Display": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Referral": [7, 10, 6, 8, 5, 6, 11, 10, 9, 9, 16, 8, 15, 12, 7, 10, 6, 8, 7, 7, 17, 6, 7, 4, 5, 2, 3], "Email": [4, 5, 5, 5, 4, 6, 2, 0, 0, 1, 2, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 2], "AI Search": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 13, 7, 6, 2, 5, 3]}, "totals": {"Direct": 2418, "Paid Search": 3137, "Organic": 1836, "Display": 0, "Referral": 221, "Email": 42, "AI Search": 38}}, "yoy": {"Direct": {"traffic_2024": 165562, "traffic_2025": 149274, "traffic_change": -9.8, "mql_2024": 1196, "mql_2025": 1381, "mql_change": 15.5}, "Paid Search": {"traffic_2024": 73224, "traffic_2025": 120463, "traffic_change": 64.5, "mql_2024": 1019, "mql_2025": 1336, "mql_change": 31.1}, "Organic": {"traffic_2024": 204347, "traffic_2025": 142959, "traffic_change": -30.0, "mql_2024": 535, "mql_2025": 617, "mql_change": 15.3}, "Display": {"traffic_2024": 0, "traffic_2025": 325236, "traffic_change": 0, "mql_2024": 0, "mql_2025": 0, "mql_change": 0}, "Referral": {"traffic_2024": 237584, "traffic_2025": 160985, "traffic_change": -32.2, "mql_2024": 249, "mql_2025": 227, "mql_change": -8.8}, "Email": {"traffic_2024": 69785, "traffic_2025": 7431, "traffic_change": -89.4, "mql_2024": 139, "mql_2025": 93, "mql_change": -33.1}, "AI Search": {"traffic_2024": 518, "traffic_2025": 2614, "traffic_change": 404.6, "mql_2024": 0, "mql_2025": 0, "mql_change": 0}}, "s2_first": {"count_by_channel": {"Direct": [9, 11, 19, 7, 7, 6, 15, 12, 15, 12, 16, 13, 21, 18, 18, 14, 20, 14, 18, 20, 17, 18, 23, 24, 32, 32, 32], "Paid Search": [12, 7, 9, 6, 6, 10, 13, 19, 19, 21, 17, 23, 25, 30, 50, 43, 39, 40, 32, 38, 40, 20, 18, 16, 20, 21, 16], "Organic": [13, 18, 18, 12, 15, 15, 13, 15, 13, 17, 13, 19, 29, 23, 27, 16, 20, 15, 23, 16, 14, 13, 4, 8, 4, 11, 6], "Display": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Referral": [1, 2, 1, 1, 2, 1, 0, 2, 1, 0, 4, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1], "Email": [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], "AI Search": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 2, 1, 3, 0]}, "acv_by_channel": {"Direct": [132385.68, 172610.65, 273186.8, 576337.04, 188451.12, 87884.01, 235745.27, 478638.75, 193479.76, 323302.98, 181014.87, 441253.82, 391677.23, 280000.0, 266000.0, 1932000.0, 280000.0, 196000.0, 266000.0, 322000.0, 336081.76, 588000.0, 336000.0, 390535.76, 616000.0, 461140.72, 504000.0], "Paid Search": [318391.4, 103721.73, 255444.35, 421643.66, 87955.45, 130948.0, 168317.81, 472447.68, 359433.3, 237723.27, 271674.57, 294998.37, 364102.67, 588000.0, 700042.37, 1778000.0, 685948.34, 630038.88, 532000.0, 574013.78, 601940.36, 378000.0, 448000.0, 266000.0, 361536.45, 336000.0, 252000.0], "Organic": [532906.89, 315478.09, 721270.23, 130380.43, 1139642.21, 252602.82, 167264.54, 259871.26, 217383.99, 321780.58, 141118.44, 260775.01, 686000.0, 420000.0, 447822.2, 224000.0, 404386.17, 238000.0, 378000.0, 223712.81, 518000.0, 224000.0, 56000.0, 126000.0, 56000.0, 350000.0, 84000.0], "Display": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Referral": [79063.88, 31199.49, 19274.28, 2066.75, 17337.63, 14328.06, 0, 18098.46, 13372.11, 0, 68576.95, 31246.5, 28000.0, 27999.99, 14000.0, 14000.0, 14000.0, 14000.0, 14000.0, 14000.0, 14000.0, 0, 0, 0, 0, 0, 14000.0], "Email": [0, 0, 0, 14328.06, 0, 0, 0, 0, 0, 0, 53520.0, 14982.26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14000.0, 14000.0], "AI Search": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 210000.0, 42000.0, 28000.0, 13225.85, 56000.0, 0]}, "totals_count": {"Direct": 463, "Paid Search": 610, "Organic": 410, "Display": 0, "Referral": 27, "Email": 5, "AI Search": 12}, "totals_acv": {"Direct": 10449726.22, "Paid Search": 11618322.44, "Organic": 8896395.67, "Display": 0, "Referral": 462564.1, "Email": 110830.32, "AI Search": 349225.85}}, "s2_last": {"count_by_channel": {"Direct": [20, 18, 21, 13, 11, 13, 25, 20, 27, 26, 24, 23, 40, 26, 34, 27, 38, 28, 32, 31, 29, 25, 28, 25, 35, 46, 30], "Paid Search": [17, 4, 5, 3, 6, 3, 5, 8, 13, 14, 17, 15, 17, 27, 33, 30, 28, 26, 24, 33, 29, 20, 12, 17, 13, 16, 12], "Organic": [11, 11, 11, 10, 7, 7, 8, 16, 12, 8, 13, 15, 20, 18, 18, 12, 15, 11, 16, 11, 13, 8, 2, 12, 6, 9, 8], "Display": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Referral": [6, 5, 4, 5, 7, 5, 3, 4, 4, 4, 3, 4, 6, 7, 7, 5, 2, 3, 3, 1, 1, 2, 2, 2, 0, 0, 2], "Email": [0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 3, 3, 2, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 2, 1, 2, 1], "AI Search": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, "acv_by_channel": {"Direct": [296051.11, 293908.38, 692548.28, 280255.48, 261850.4, 207865.16, 320145.77, 423158.92, 484395.4, 391760.24, 302535.61, 577112.04, 909677.23, 406068.69, 490000.0, 504000.0, 545948.34, 419957.12, 518000.0, 476000.0, 727940.36, 448000.0, 406000.0, 404535.76, 657140.72, 853140.72, 448000.0], "Paid Search": [271192.7, 70979.63, 154729.53, 89420.91, 234779.3, 25708.75, 53476.06, 288504.43, 201171.15, 166588.13, 293894.62, 190617.9, 280102.67, 420000.0, 462042.37, 644000.0, 504000.0, 392081.76, 350000.0, 504013.78, 419955.84, 546000.0, 364000.0, 322000.0, 208395.73, 266000.0, 224000.0], "Organic": [605170.6, 134611.1, 135569.47, 554636.31, 860095.51, 82957.05, 103000.17, 235166.83, 473477.86, 284614.58, 208977.69, 198258.59, 280000.0, 476000.0, 321822.2, 182000.0, 266000.0, 168000.0, 294000.0, 153712.81, 196081.76, 154000.0, 28000.0, 350000.0, 98000.0, 139904.83, 112000.0], "Display": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "Referral": [252007.4, 137606.93, 57955.4, 382118.17, 73746.98, 76331.06, 84113.6, 272980.45, 46133.77, 76435.56, 15868.46, 208366.77, 84000.0, 98000.0, 98000.0, 994000.0, 68386.17, 42000.0, 42000.0, 14000.0, 14000.0, 350000.0, 28000.0, 28000.0, 0, 0, 28000.0], "Email": [0, 0, 0, 0, 20251.85, 16138.75, 0, 0, 0, 16138.75, 84545.69, 42124.66, 28000.0, 0, 14000.0, 0, 0, 28000.0, 14000.0, 0, 0, 0, 14000.0, 56000.0, 14000.0, 98000.0, 14000.0], "AI Search": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, "totals_count": {"Direct": 715, "Paid Search": 447, "Organic": 308, "Display": 0, "Referral": 97, "Email": 21, "AI Search": 0}, "totals_acv": {"Direct": 12745995.73, "Paid Search": 7947655.26, "Organic": 7096057.36, "Display": 0, "Referral": 3572050.72, "Email": 459199.7, "AI Search": 0}}};
+
+const INSIGHTS_DATA = {"period_recent": "Mar 2026", "period_prior": "Feb 2026", "insights": [{"type": "channel_change", "severity": "high", "icon": "\ud83d\udcc8", "title": "Direct traffic increase: 274%", "detail": "Direct went from 36,108 to 134,904 new users (+273.6%). Top drivers: (direct) / (none) (+98,794)", "metric": 273.61249584579593}, {"type": "channel_change", "severity": "medium", "icon": "\ud83d\udcc9", "title": "Paid Search traffic decrease: 30%", "detail": "Paid Search went from 4,772 to 3,363 new users (-29.5%). Top drivers: google / cpc (-1,352); microsoft / ppc (-30); google / ppc (-16)", "metric": 29.526404023470242}, {"type": "channel_change", "severity": "medium", "icon": "\ud83d\udcc9", "title": "Organic traffic decrease: 39%", "detail": "Organic went from 7,605 to 4,610 new users (-39.4%). Top drivers: google / organic (-2,838); bing / organic (-129); yahoo / organic (-25)", "metric": 39.38198553583169}, {"type": "channel_change", "severity": "high", "icon": "\ud83d\udcc9", "title": "Display traffic decrease: 52%", "detail": "Display went from 1,240 to 598 new users (-51.8%). Top drivers: cm360 / cpm (-642)", "metric": 51.774193548387096}, {"type": "channel_change", "severity": "medium", "icon": "\ud83d\udcc9", "title": "Referral traffic decrease: 44%", "detail": "Referral went from 7,028 to 3,942 new users (-43.9%). Top drivers: manage.roller.app / referral (-529); pos.roller.app / referral (-477); checkout.roller.app / referral (-337)", "metric": 43.91007398975527}, {"type": "region_change", "severity": "medium", "icon": "\ud83c\udf0d", "title": "EMEA traffic decrease: 45%", "detail": "EMEA went from 7,882 to 4,362 new users. Share of total: 13.6% \u2192 2.9% (-10.7pp).", "metric": 44.65871606191322}, {"type": "region_change", "severity": "medium", "icon": "\ud83c\udf0f", "title": "APAC traffic decrease: 41%", "detail": "APAC went from 6,635 to 3,890 new users. Share of total: 11.5% \u2192 2.6% (-8.9pp).", "metric": 41.3715146948003}, {"type": "region_change", "severity": "medium", "icon": "\ud83c\udf0e", "title": "AMER traffic increase: 223%", "detail": "AMER went from 43,226 to 139,787 new users. Share of total: 74.8% \u2192 94.4% (+19.5pp).", "metric": 223.3863878221441}, {"type": "conversion_change", "severity": "high", "icon": "\u26a0\ufe0f", "title": "Direct Visit\u2192MQL rate declined", "detail": "Direct conversion rate went from 0.38% to 0.08% (-0.30pp). MQLs: 136 \u2192 102.", "metric": 3.0103851209028827}, {"type": "conversion_change", "severity": "medium", "icon": "\ud83c\udfaf", "title": "Organic Visit\u2192MQL rate improved", "detail": "Organic conversion rate went from 0.26% to 0.43% (+0.17pp). MQLs: 20 \u2192 20.", "metric": 1.70854601023131}, {"type": "conversion_change", "severity": "high", "icon": "\ud83c\udfaf", "title": "Email Visit\u2192MQL rate improved", "detail": "Email conversion rate went from 0.59% to 3.65% (+3.06pp). MQLs: 1 \u2192 5.", "metric": 30.613997423787026}, {"type": "growing_source", "severity": "medium", "icon": "\ud83d\ude80", "title": "Fast-growing source: (direct) / (none) (+274%)", "detail": "(direct) / (none) grew from 36,087 to 134,881 new users (274% increase).", "metric": 27.376617618532986}]};
+
+const INDUSTRY_INSIGHTS = [
+  {"date": "Mar 2026", "category": "AI Search", "insight": "AI Overviews appear in ~30% of Google searches; where present, organic CTR for position 1 drops by 58%. AI search referrals (ChatGPT, Perplexity) growing as a new traffic channel.", "impact": "Monitor AI Search channel; consider AEO (AI Engine Optimization) strategies.", "source": "Ahrefs", "sourceUrl": "https://ahrefs.com/blog/ai-overviews-reduce-clicks-update/"},
+  {"date": "Mar 2026", "category": "Google Ads", "insight": "Google launching \"AI Max for Search\" — AI-powered keyword expansion and creative optimization in Search campaigns. Early adopters seeing ~14% more conversions at similar CPA.", "impact": "May affect Paid Search volume and CPC; monitor campaign performance closely.", "source": "Google Ads Blog", "sourceUrl": "https://blog.google/products/ads-commerce/google-ai-max-for-search-campaigns/"},
+  {"date": "Feb 2026", "category": "Google Ads", "insight": "Performance Max campaigns getting more advertiser controls: channel-level reporting, search term transparency, campaign-level negative keywords, and placement visibility.", "impact": "Review PMax campaign structure and reporting.", "source": "Search Engine Land", "sourceUrl": "https://searchengineland.com/google-ads-shows-pmax-placements-in-where-ads-showed-report-469527"},
+  {"date": "Feb 2026", "category": "Google Ads", "insight": "Call-only ads deprecated (no new creation from Feb 2026; all existing ads stop serving Feb 2027). Replaced by responsive search ads with call assets.", "impact": "Migrate any call-only ad formats to RSAs with call assets.", "source": "Google Ads Help", "sourceUrl": "https://support.google.com/google-ads/answer/16598240?hl=en"},
+  {"date": "Q1 2026", "category": "SEO/AEO", "insight": "\"Generative Engine Optimization\" (GEO) emerging as key strategy — optimizing content to be cited by AI systems. News publishers expect search referrals to drop 43% by 2029.", "impact": "Adapt content strategy to include structured, authoritative answers.", "source": "Search Engine Land", "sourceUrl": "https://searchengineland.com/mastering-generative-engine-optimization-in-2026-full-guide-469142"},
+  {"date": "Q1 2026", "category": "Paid Media", "insight": "Google placing ads above AI Overviews at top of search results, and introducing \"Direct Offers\" in AI Mode — a new monetisation format for ready-to-buy shoppers.", "impact": "May reduce organic visibility; monitor impact on CTR and paid performance.", "source": "Search Engine Land", "sourceUrl": "https://searchengineland.com/ai-mode-google-next-ads-engine-471967"}
+];
+
+const CH_COLORS = {
+  'Direct':'#4F46E5', 'Paid Search':'#06B6D4', 'Organic':'#10B981',
+  'Display':'#F59E0B', 'Referral':'#8B5CF6', 'Email':'#EC4899',
+  'AI Search':'#14B8A6'
+};
+const CHANNELS = D.channels;
+
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#64748B';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+
+function fmtN(v) { return v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(1)+'K' : v.toString(); }
+function fmtD(v) { return '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v.toFixed(0)); }
+function fmtPct(v) { return v.toFixed(1) + '%'; }
+function shortMonth(m) { const [y,mo]=m.split('-'); const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return ms[parseInt(mo)-1]+' '+y.slice(2); }
+function commaFmt(n) { return n.toLocaleString(); }
+
+let charts = {};
+
+function destroyCharts() {
+  Object.values(charts).forEach(c => { if(c && c.destroy) c.destroy(); });
+  charts = {};
+}
+
+// Populate month dropdowns
+function initDateFilters() {
+  const startSel = document.getElementById('startMonth');
+  const endSel = document.getElementById('endMonth');
+  D.months.forEach(m => {
+    const opt1 = new Option(shortMonth(m), m);
+    const opt2 = new Option(shortMonth(m), m);
+    startSel.add(opt1);
+    endSel.add(opt2);
+  });
+  // Default to 2025 YTD
+  const first2025 = D.months.find(m => m.startsWith('2025'));
+  const last2025 = [...D.months].reverse().find(m => m.startsWith('2025'));
+  if (first2025) startSel.value = first2025;
+  if (last2025) endSel.value = last2025;
+}
+
+function applyQuickRange() {
+  const qr = document.getElementById('quickRange').value;
+  const startSel = document.getElementById('startMonth');
+  const endSel = document.getElementById('endMonth');
+  if (qr === 'all') {
+    startSel.value = D.months[0];
+    endSel.value = D.months[D.months.length - 1];
+  } else if (qr === 'ytd-2025') {
+    startSel.value = D.months.find(m => m.startsWith('2025')) || D.months[0];
+    endSel.value = [...D.months].reverse().find(m => m.startsWith('2025')) || D.months[D.months.length - 1];
+  } else if (qr) {
+    startSel.value = D.months.find(m => m.startsWith(qr)) || D.months[0];
+    endSel.value = [...D.months].reverse().find(m => m.startsWith(qr)) || D.months[D.months.length - 1];
+  }
+  applyFilters();
+}
+
+function getFilteredMonths() {
+  const start = document.getElementById('startMonth').value;
+  const end = document.getElementById('endMonth').value;
+  document.getElementById('quickRange').value = '';
+  return D.months.filter(m => m >= start && m <= end);
+}
+
+function getFilteredIndices() {
+  const months = getFilteredMonths();
+  return months.map(m => D.months.indexOf(m));
+}
+
+function getMqlData() {
+  const touch = document.getElementById('touchFilter').value;
+  return touch === 'first' ? D.mql_first : D.mql_last;
+}
+
+function getS2Data() {
+  const touch = document.getElementById('touchFilter').value;
+  return touch === 'first' ? D.s2_first : D.s2_last;
+}
+
+function sumFiltered(arr, indices) {
+  return indices.reduce((s, i) => s + (arr[i] || 0), 0);
+}
+
+function showTab(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function renderInsights() {
+  // Period badge
+  document.getElementById('periodBadge').innerHTML = `<strong>Auto-Generated Insights</strong> — Comparing the last 30 days (<strong>${INSIGHTS_DATA.period_recent}</strong>) vs the prior 30 days (<strong>${INSIGHTS_DATA.period_prior}</strong>). These insights highlight the biggest month-on-month changes across traffic, conversions, regions, and source/medium using last touch attribution.`;
+
+  // Sort insights by severity (high first) then by metric magnitude
+  const sortedInsights = [...INSIGHTS_DATA.insights].sort((a, b) => {
+    const severityOrder = {'high': 0, 'medium': 1};
+    const aSevOrder = severityOrder[a.severity] || 2;
+    const bSevOrder = severityOrder[b.severity] || 2;
+    if (aSevOrder !== bSevOrder) return aSevOrder - bSevOrder;
+    return Math.abs(b.metric) - Math.abs(a.metric);
+  });
+
+  // Generate insight cards
+  let cardsHtml = '';
+  sortedInsights.forEach(insight => {
+    let cardClass = 'insight-card';
+    let severityClass = 'insight-severity';
+    let severityText = insight.severity.toUpperCase();
+
+    if (insight.severity === 'high') {
+      cardClass += ' severity-high';
+      severityClass += '';
+    } else if (insight.severity === 'medium') {
+      cardClass += ' severity-medium';
+      severityClass += ' medium';
+    }
+
+    if (insight.detail.includes('increase') || insight.detail.includes('improved')) {
+      cardClass = 'insight-card severity-increase';
+      severityClass += ' increase';
+    }
+
+    cardsHtml += `
+      <div class="${cardClass}">
+        <div class="insight-icon">${insight.icon}</div>
+        <div class="insight-content">
+          <div class="insight-title">${insight.title}</div>
+          <div class="insight-detail">${insight.detail}</div>
+          <div class="${severityClass}">${severityText}</div>
+        </div>
+      </div>
+    `;
+  });
+  document.getElementById('insightCards').innerHTML = cardsHtml;
+
+  // Generate industry insights table
+  let tableHtml = '<thead><tr><th>Date</th><th>Category</th><th>Insight</th><th>Impact</th><th>Source</th></tr></thead><tbody>';
+  INDUSTRY_INSIGHTS.forEach(row => {
+    tableHtml += `<tr>
+      <td><strong>${row.date}</strong></td>
+      <td>${row.category}</td>
+      <td>${row.insight}</td>
+      <td>${row.impact}</td>
+      <td><a href="${row.sourceUrl}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:none;font-weight:500;">${row.source} ↗</a></td>
+    </tr>`;
+  });
+  tableHtml += '</tbody>';
+  document.getElementById('industryTable').innerHTML = tableHtml;
+}
+
+function applyFilters() {
+  destroyCharts();
+  const months = getFilteredMonths();
+  const indices = getFilteredIndices();
+  const labels = months.map(shortMonth);
+  const mql = getMqlData();
+  const s2 = getS2Data();
+  const touch = document.getElementById('touchFilter').value;
+
+  // Date range badge
+  if (months.length > 0) {
+    document.getElementById('dateRange').textContent = shortMonth(months[0]) + ' — ' + shortMonth(months[months.length-1]);
+  }
+
+  // ── KPIs ──
+  const totalTraffic = CHANNELS.reduce((s,ch) => s + sumFiltered(D.traffic.by_channel[ch], indices), 0);
+  const totalMql = CHANNELS.reduce((s,ch) => s + sumFiltered(mql.by_channel[ch], indices), 0);
+  const totalS2 = CHANNELS.reduce((s,ch) => s + sumFiltered(s2.count_by_channel[ch], indices), 0);
+  const totalAcv = CHANNELS.reduce((s,ch) => s + sumFiltered(s2.acv_by_channel[ch], indices), 0);
+  const convRate = totalTraffic > 0 ? (totalMql / totalTraffic * 100) : 0;
+  const mqlToS2 = totalMql > 0 ? (totalS2 / totalMql * 100) : 0;
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi"><div class="label">New Users</div><div class="val">${fmtN(totalTraffic)}</div></div>
+    <div class="kpi"><div class="label">MQLs (${touch === 'first' ? 'First' : 'Last'} Touch)</div><div class="val">${commaFmt(totalMql)}</div></div>
+    <div class="kpi"><div class="label">S2 Opportunities</div><div class="val">${commaFmt(totalS2)}</div></div>
+    <div class="kpi"><div class="label">S2 Piped ACV</div><div class="val">${fmtD(totalAcv)}</div></div>
+    <div class="kpi"><div class="label">Visit → MQL Rate</div><div class="val">${fmtPct(convRate)}</div></div>
+    <div class="kpi"><div class="label">MQL → S2 Rate</div><div class="val">${fmtPct(mqlToS2)}</div></div>
+  `;
+
+  // ── Traffic Pie ──
+  const tData = CHANNELS.map(ch => sumFiltered(D.traffic.by_channel[ch], indices)).filter((v,i) => v > 0);
+  const tLabels = CHANNELS.filter((ch,i) => sumFiltered(D.traffic.by_channel[ch], indices) > 0);
+  charts.trafficPie = new Chart(document.getElementById('trafficPie'), {
+    type: 'doughnut',
+    data: { labels: tLabels, datasets: [{ data: tData, backgroundColor: tLabels.map(c => CH_COLORS[c]) }] },
+    options: { responsive:true, plugins:{ legend:{ position:'bottom' }, tooltip:{ callbacks:{ label: ctx => ctx.label + ': ' + commaFmt(ctx.raw) + ' (' + fmtPct(ctx.raw/tData.reduce((a,b)=>a+b,0)*100) + ')' } } } }
+  });
+
+  // ── MQL Pie ──
+  const mData = CHANNELS.map(ch => sumFiltered(mql.by_channel[ch], indices)).filter((v,i) => v > 0);
+  const mLabels = CHANNELS.filter(ch => sumFiltered(mql.by_channel[ch], indices) > 0);
+  charts.mqlPie = new Chart(document.getElementById('mqlPie'), {
+    type: 'doughnut',
+    data: { labels: mLabels, datasets: [{ data: mData, backgroundColor: mLabels.map(c => CH_COLORS[c]) }] },
+    options: { responsive:true, plugins:{ legend:{ position:'bottom' }, tooltip:{ callbacks:{ label: ctx => ctx.label + ': ' + commaFmt(ctx.raw) + ' (' + fmtPct(ctx.raw/mData.reduce((a,b)=>a+b,0)*100) + ')' } } } }
+  });
+
+  // ── Traffic Table ──
+  let thtml = '<thead><tr><th>Channel</th><th class="num">New Users</th><th class="num">% of Total</th></tr></thead><tbody>';
+  let ttot = 0;
+  const tVals = {};
+  CHANNELS.forEach(ch => { tVals[ch] = sumFiltered(D.traffic.by_channel[ch], indices); ttot += tVals[ch]; });
+  CHANNELS.filter(ch => tVals[ch] > 0).sort((a,b) => tVals[b] - tVals[a]).forEach(ch => {
+    const pct = ttot > 0 ? (tVals[ch]/ttot*100).toFixed(1)+'%' : '-';
+    thtml += '<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+CH_COLORS[ch]+';margin-right:8px;"></span>'+ch+'</td><td class="num">'+commaFmt(tVals[ch])+'</td><td class="num">'+pct+'</td></tr>';
+  });
+  thtml += '<tr class="total-row"><td>Total</td><td class="num">'+commaFmt(ttot)+'</td><td class="num">100%</td></tr></tbody>';
+  document.getElementById('trafficTable').innerHTML = thtml;
+
+  // ── MQL Table ──
+  let mhtml = '<thead><tr><th>Channel</th><th class="num">MQLs</th><th class="num">% of Total</th></tr></thead><tbody>';
+  let mtot = 0;
+  const mVals = {};
+  CHANNELS.forEach(ch => { mVals[ch] = sumFiltered(mql.by_channel[ch], indices); mtot += mVals[ch]; });
+  CHANNELS.filter(ch => mVals[ch] > 0).sort((a,b) => mVals[b] - mVals[a]).forEach(ch => {
+    const pct = mtot > 0 ? (mVals[ch]/mtot*100).toFixed(1)+'%' : '-';
+    mhtml += '<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+CH_COLORS[ch]+';margin-right:8px;"></span>'+ch+'</td><td class="num">'+commaFmt(mVals[ch])+'</td><td class="num">'+pct+'</td></tr>';
+  });
+  mhtml += '<tr class="total-row"><td>Total</td><td class="num">'+commaFmt(mtot)+'</td><td class="num">100%</td></tr></tbody>';
+  document.getElementById('mqlTable').innerHTML = mhtml;
+
+  // ── Region Pie + Table ──
+  const REGION_COLORS = {'AMER':'#4F46E5','EMEA':'#06B6D4','APAC':'#10B981','Other':'#94A3B8'};
+  const regions = D.traffic.regions || [];
+  const rVals = {};
+  let rtot = 0;
+  regions.forEach(rg => {
+    rVals[rg] = sumFiltered(D.traffic.region_by_month[rg], indices);
+    rtot += rVals[rg];
+  });
+  const rSorted = regions.filter(rg => rVals[rg] > 0).sort((a,b) => rVals[b] - rVals[a]);
+  charts.regionPie = new Chart(document.getElementById('regionPie'), {
+    type: 'doughnut',
+    data: { labels: rSorted, datasets: [{ data: rSorted.map(r => rVals[r]), backgroundColor: rSorted.map(r => REGION_COLORS[r] || '#94A3B8') }] },
+    options: { responsive:true, plugins:{ legend:{position:'bottom'}, tooltip:{ callbacks:{ label: ctx => ctx.label+': '+commaFmt(ctx.raw)+' ('+fmtPct(ctx.raw/rtot*100)+')' } } } }
+  });
+
+  let rhtml = '<thead><tr><th>Region</th><th class="num">New Users</th><th class="num">% of Total</th></tr></thead><tbody>';
+  rSorted.forEach(rg => {
+    const pct = rtot > 0 ? (rVals[rg]/rtot*100).toFixed(1)+'%' : '-';
+    rhtml += '<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+(REGION_COLORS[rg]||'#94A3B8')+';margin-right:8px;"></span>'+rg+'</td><td class="num">'+commaFmt(rVals[rg])+'</td><td class="num">'+pct+'</td></tr>';
+  });
+  rhtml += '<tr class="total-row"><td>Total</td><td class="num">'+commaFmt(rtot)+'</td><td class="num">100%</td></tr></tbody>';
+  document.getElementById('regionTable').innerHTML = rhtml;
+
+  // ── Traffic Trend (stacked) ──
+  charts.trafficTrend = new Chart(document.getElementById('trafficTrend'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: CHANNELS.map(ch => ({
+        label: ch,
+        data: indices.map(i => D.traffic.by_channel[ch][i] || 0),
+        backgroundColor: CH_COLORS[ch], borderRadius: 2
+      }))
+    },
+    options: { responsive:true, scales:{ x:{stacked:true}, y:{stacked:true, ticks:{callback:fmtN}} }, plugins:{ legend:{position:'bottom'} } }
+  });
+
+  // ── Total Traffic Trend ──
+  const totalByMonth = indices.map(i => D.traffic.monthly_total[i] || 0);
+  charts.totalTrend = new Chart(document.getElementById('totalTrend'), {
+    type: 'line',
+    data: { labels: labels, datasets: [{ label:'Total New Users', data:totalByMonth, borderColor:'#4F46E5', backgroundColor:'#4F46E520', fill:true, tension:.3, pointRadius:3 }] },
+    options: { responsive:true, scales:{ y:{ticks:{callback:fmtN}} }, plugins:{ legend:{display:false} } }
+  });
+
+  // ── Channel Share Over Time (100% stacked) ──
+  charts.channelShareTrend = new Chart(document.getElementById('channelShareTrend'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: CHANNELS.map(ch => ({
+        label: ch,
+        data: indices.map(i => {
+          const total = CHANNELS.reduce((s,c) => s + (D.traffic.by_channel[c][i] || 0), 0);
+          const val = D.traffic.by_channel[ch][i] || 0;
+          return total > 0 ? parseFloat((val / total * 100).toFixed(1)) : 0;
+        }),
+        backgroundColor: CH_COLORS[ch], borderRadius: 0
+      }))
+    },
+    options: { responsive:true, scales:{ x:{stacked:true}, y:{stacked:true, max:100, ticks:{callback:v=>v+'%'}} }, plugins:{ legend:{position:'bottom'}, tooltip:{ callbacks:{ label: ctx => ctx.dataset.label + ': ' + ctx.raw + '%' } } } }
+  });
+
+  // ── Conversion Rate by Channel Trend ──
+  const convChannels = CHANNELS.filter(ch => {
+    const totalT = sumFiltered(D.traffic.by_channel[ch], indices);
+    const totalM = sumFiltered(mql.by_channel[ch], indices);
+    return totalT > 0 && totalM > 0;
+  });
+  charts.convRateTrend = new Chart(document.getElementById('convRateTrend'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: convChannels.map(ch => ({
+        label: ch,
+        data: indices.map(i => {
+          const t = D.traffic.by_channel[ch][i] || 0;
+          const m = mql.by_channel[ch][i] || 0;
+          return t > 0 ? parseFloat((m / t * 100).toFixed(2)) : null;
+        }),
+        borderColor: CH_COLORS[ch],
+        backgroundColor: CH_COLORS[ch] + '20',
+        tension: .3, pointRadius: 3, spanGaps: true
+      }))
+    },
+    options: { responsive:true, scales:{ y:{ ticks:{ callback: v => v + '%' }, title:{ display:true, text:'Conversion Rate' } } }, plugins:{ legend:{position:'bottom'} } }
+  });
+
+  // ── Overall Conversion Rate Trend ──
+  const overallConvData = indices.map(i => {
+    const t = CHANNELS.reduce((s,ch) => s + (D.traffic.by_channel[ch][i] || 0), 0);
+    const m = CHANNELS.reduce((s,ch) => s + (mql.by_channel[ch][i] || 0), 0);
+    return t > 0 ? parseFloat((m / t * 100).toFixed(3)) : null;
+  });
+  charts.convRateTotal = new Chart(document.getElementById('convRateTotal'), {
+    type: 'line',
+    data: { labels: labels, datasets: [{
+      label: 'Overall Visit → MQL %',
+      data: overallConvData,
+      borderColor: '#4F46E5', backgroundColor: '#4F46E520', fill: true, tension: .3, pointRadius: 3, spanGaps: true
+    }] },
+    options: { responsive:true, scales:{ y:{ ticks:{ callback: v => v + '%' }, title:{ display:true, text:'Conversion Rate' } } }, plugins:{ legend:{display:false} } }
+  });
+
+  // ── Top 10 Source / Medium Table ──
+  const smAll = D.traffic.src_med_all || {};
+  const smTotals = {};
+  Object.keys(smAll).forEach(sm => {
+    smTotals[sm] = sumFiltered(smAll[sm], indices);
+  });
+  const smSorted = Object.keys(smTotals).sort((a,b) => smTotals[b] - smTotals[a]).slice(0, 10);
+  const smGrand = Object.values(smTotals).reduce((a,b) => a+b, 0);
+  let smhtml = '<thead><tr><th>#</th><th>Source / Medium</th><th class="num">New Users</th><th class="num">% of Total</th></tr></thead><tbody>';
+  smSorted.forEach((sm, i) => {
+    const pct = smGrand > 0 ? (smTotals[sm]/smGrand*100).toFixed(1)+'%' : '-';
+    smhtml += '<tr><td>'+(i+1)+'</td><td>'+sm+'</td><td class="num">'+commaFmt(smTotals[sm])+'</td><td class="num">'+pct+'</td></tr>';
+  });
+  smhtml += '</tbody>';
+  document.getElementById('srcMedTable').innerHTML = smhtml;
+
+  // ── Funnel Tables (First Touch & Last Touch side by side) ──
+  function buildFunnelHtml(mqlData, s2Data) {
+    let html = '<thead><tr><th>Channel</th><th class="num">New Users</th><th class="num">MQLs</th><th class="num">Visit→MQL</th><th class="num">S2s</th><th class="num">MQL→S2</th><th class="num">S2 Piped ACV</th></tr></thead><tbody>';
+    let totT=0, totM=0, totS=0, totA=0;
+    CHANNELS.forEach(ch => {
+      const t = sumFiltered(D.traffic.by_channel[ch], indices);
+      const m = sumFiltered(mqlData.by_channel[ch], indices);
+      const s = sumFiltered(s2Data.count_by_channel[ch], indices);
+      const a = sumFiltered(s2Data.acv_by_channel[ch], indices);
+      const cr1 = t > 0 ? (m/t*100).toFixed(2)+'%' : '-';
+      const cr2 = m > 0 ? (s/m*100).toFixed(1)+'%' : '-';
+      html += '<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+CH_COLORS[ch]+';margin-right:8px;"></span>'+ch+'</td><td class="num">'+commaFmt(t)+'</td><td class="num">'+commaFmt(m)+'</td><td class="num">'+cr1+'</td><td class="num">'+commaFmt(s)+'</td><td class="num">'+cr2+'</td><td class="num">'+fmtD(a)+'</td></tr>';
+      totT+=t; totM+=m; totS+=s; totA+=a;
+    });
+    const totCr1 = totT > 0 ? (totM/totT*100).toFixed(2)+'%' : '-';
+    const totCr2 = totM > 0 ? (totS/totM*100).toFixed(1)+'%' : '-';
+    html += '<tr class="total-row"><td>Total</td><td class="num">'+commaFmt(totT)+'</td><td class="num">'+commaFmt(totM)+'</td><td class="num">'+totCr1+'</td><td class="num">'+commaFmt(totS)+'</td><td class="num">'+totCr2+'</td><td class="num">'+fmtD(totA)+'</td></tr>';
+    html += '</tbody>';
+    return html;
+  }
+  document.getElementById('funnelTableFirst').innerHTML = buildFunnelHtml(D.mql_first, D.s2_first);
+  document.getElementById('funnelTableLast').innerHTML = buildFunnelHtml(D.mql_last, D.s2_last);
+
+  // ── Funnel Conversion Chart ──
+  const funnelChData = CHANNELS.filter(ch => sumFiltered(mql.by_channel[ch], indices) > 0);
+  charts.funnelChart = new Chart(document.getElementById('funnelChart'), {
+    type: 'bar',
+    data: {
+      labels: funnelChData,
+      datasets: [
+        { label: 'Visit → MQL %', data: funnelChData.map(ch => { const t=sumFiltered(D.traffic.by_channel[ch],indices); const m=sumFiltered(mql.by_channel[ch],indices); return t>0?(m/t*100):0; }), backgroundColor: '#4F46E580', borderColor:'#4F46E5', borderWidth:1, borderRadius:4, yAxisID:'y' },
+        { label: 'MQL → S2 %', data: funnelChData.map(ch => { const m=sumFiltered(mql.by_channel[ch],indices); const s=sumFiltered(s2.count_by_channel[ch],indices); return m>0?(s/m*100):0; }), backgroundColor: '#10B98180', borderColor:'#10B981', borderWidth:1, borderRadius:4, yAxisID:'y' }
+      ]
+    },
+    options: { responsive:true, scales:{ y:{ ticks:{callback:v=>v+'%'} } }, plugins:{ legend:{position:'bottom'} } }
+  });
+
+  // ── YoY YTD Table (3-year comparison) ──
+  // Determine YTD period based on 2026 available months
+  const months2026 = D.months.filter(m => m.startsWith('2026'));
+  const ytdSuffixes = months2026.map(m => m.substring(4)); // e.g. ['-01','-02','-03']
+  const monthNames = {'-01':'Jan','-02':'Feb','-03':'Mar','-04':'Apr','-05':'May','-06':'Jun','-07':'Jul','-08':'Aug','-09':'Sep','-10':'Oct','-11':'Nov','-12':'Dec'};
+  const ytdLabel = monthNames[ytdSuffixes[0]] + '–' + monthNames[ytdSuffixes[ytdSuffixes.length-1]];
+  document.getElementById('yoyTableTitle').textContent = 'Year-over-Year Comparison — YTD (' + ytdLabel + ')';
+  document.getElementById('yoyNote').textContent = 'Comparing ' + ytdLabel + ' across 2024, 2025, and 2026 for a fair like-for-like comparison.';
+
+  function ytdIndices(year) {
+    return ytdSuffixes.map(s => D.months.indexOf(year + s)).filter(i => i >= 0);
+  }
+  const idx24 = ytdIndices('2024'), idx25 = ytdIndices('2025'), idx26 = ytdIndices('2026');
+
+  function deltaHtml(current, previous) {
+    if (previous === 0) return current > 0 ? '<span class="delta up">New</span>' : '-';
+    const pct = ((current - previous) / previous * 100);
+    const cls = pct >= 0 ? 'up' : 'down';
+    const arrow = pct >= 0 ? '▲' : '▼';
+    return '<span class="delta ' + cls + '">' + arrow + ' ' + Math.abs(pct).toFixed(1) + '%</span>';
+  }
+
+  let yhtml = '<thead><tr><th>Channel</th><th class="num">2024</th><th class="num">2025</th><th class="num">24→25</th><th class="num">2026</th><th class="num">25→26</th></tr></thead>';
+
+  // Traffic section
+  yhtml += '<tbody><tr style="background:#F1F5F9;"><td colspan="6" style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sec);padding:10px 14px;">Website Traffic (New Users)</td></tr>';
+  let totT24=0, totT25=0, totT26=0;
+  CHANNELS.forEach(ch => {
+    const t24 = sumFiltered(D.traffic.by_channel[ch], idx24);
+    const t25 = sumFiltered(D.traffic.by_channel[ch], idx25);
+    const t26 = sumFiltered(D.traffic.by_channel[ch], idx26);
+    totT24+=t24; totT25+=t25; totT26+=t26;
+    yhtml += '<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+CH_COLORS[ch]+';margin-right:8px;"></span>'+ch+'</td>';
+    yhtml += '<td class="num">'+commaFmt(t24)+'</td><td class="num">'+commaFmt(t25)+'</td><td class="num">'+deltaHtml(t25,t24)+'</td>';
+    yhtml += '<td class="num">'+commaFmt(t26)+'</td><td class="num">'+deltaHtml(t26,t25)+'</td></tr>';
+  });
+  yhtml += '<tr class="total-row"><td>Total</td><td class="num">'+commaFmt(totT24)+'</td><td class="num">'+commaFmt(totT25)+'</td><td class="num">'+deltaHtml(totT25,totT24)+'</td><td class="num">'+commaFmt(totT26)+'</td><td class="num">'+deltaHtml(totT26,totT25)+'</td></tr>';
+
+  // MQL section
+  yhtml += '<tr style="background:#F1F5F9;"><td colspan="6" style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sec);padding:10px 14px;">MQLs (' + (document.getElementById('touchFilter').value === 'first' ? 'First' : 'Last') + ' Touch)</td></tr>';
+  let totM24=0, totM25=0, totM26=0;
+  CHANNELS.forEach(ch => {
+    const m24 = sumFiltered(mql.by_channel[ch], idx24);
+    const m25 = sumFiltered(mql.by_channel[ch], idx25);
+    const m26 = sumFiltered(mql.by_channel[ch], idx26);
+    totM24+=m24; totM25+=m25; totM26+=m26;
+    yhtml += '<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+CH_COLORS[ch]+';margin-right:8px;"></span>'+ch+'</td>';
+    yhtml += '<td class="num">'+commaFmt(m24)+'</td><td class="num">'+commaFmt(m25)+'</td><td class="num">'+deltaHtml(m25,m24)+'</td>';
+    yhtml += '<td class="num">'+commaFmt(m26)+'</td><td class="num">'+deltaHtml(m26,m25)+'</td></tr>';
+  });
+  yhtml += '<tr class="total-row"><td>Total</td><td class="num">'+commaFmt(totM24)+'</td><td class="num">'+commaFmt(totM25)+'</td><td class="num">'+deltaHtml(totM25,totM24)+'</td><td class="num">'+commaFmt(totM26)+'</td><td class="num">'+deltaHtml(totM26,totM25)+'</td></tr>';
+  yhtml += '</tbody>';
+  document.getElementById('yoyTable').innerHTML = yhtml;
+
+  // ── Render Insights ──
+  renderInsights();
+
+  // ── YoY YTD Charts (3 years) ──
+  charts.yoyTraffic = new Chart(document.getElementById('yoyTrafficChart'), {
+    type: 'bar',
+    data: {
+      labels: CHANNELS,
+      datasets: [
+        { label: '2024 '+ytdLabel, data: CHANNELS.map(ch => sumFiltered(D.traffic.by_channel[ch], idx24)), backgroundColor: '#CBD5E1', borderRadius:4 },
+        { label: '2025 '+ytdLabel, data: CHANNELS.map(ch => sumFiltered(D.traffic.by_channel[ch], idx25)), backgroundColor: '#4F46E5', borderRadius:4 },
+        { label: '2026 '+ytdLabel, data: CHANNELS.map(ch => sumFiltered(D.traffic.by_channel[ch], idx26)), backgroundColor: '#06B6D4', borderRadius:4 }
+      ]
+    },
+    options: { responsive:true, scales:{ y:{ticks:{callback:fmtN}} }, plugins:{ legend:{position:'bottom'} } }
+  });
+
+  charts.yoyMql = new Chart(document.getElementById('yoyMqlChart'), {
+    type: 'bar',
+    data: {
+      labels: CHANNELS,
+      datasets: [
+        { label: '2024 '+ytdLabel, data: CHANNELS.map(ch => sumFiltered(mql.by_channel[ch], idx24)), backgroundColor: '#CBD5E1', borderRadius:4 },
+        { label: '2025 '+ytdLabel, data: CHANNELS.map(ch => sumFiltered(mql.by_channel[ch], idx25)), backgroundColor: '#4F46E5', borderRadius:4 },
+        { label: '2026 '+ytdLabel, data: CHANNELS.map(ch => sumFiltered(mql.by_channel[ch], idx26)), backgroundColor: '#06B6D4', borderRadius:4 }
+      ]
+    },
+    options: { responsive:true, plugins:{ legend:{position:'bottom'} } }
+  });
+
+  // ── YoY Monthly Line Charts (year overlay) ──
+  const allMonthSuffixes = ['-01','-02','-03','-04','-05','-06','-07','-08','-09','-10','-11','-12'];
+  const monthLabels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const years = ['2024','2025','2026'];
+  const yearColors = {'2024':'#94A3B8','2025':'#4F46E5','2026':'#06B6D4'};
+  const yearDash = {'2024':[6,3],'2025':[],'2026':[]};
+
+  function monthlyTotals(dataByChannel, year) {
+    return allMonthSuffixes.map(s => {
+      const idx = D.months.indexOf(year + s);
+      if (idx < 0) return null;
+      let total = 0;
+      CHANNELS.forEach(ch => { total += (dataByChannel[ch] && dataByChannel[ch][idx]) || 0; });
+      return total;
+    });
+  }
+
+  // Annotation helper
+  function makeAnnotation(xVal, label, color, yAdj, xAdj) {
+    return {
+      type: 'label',
+      xValue: xVal,
+      yAdjust: yAdj || -12,
+      xAdjust: xAdj || 0,
+      backgroundColor: color || 'rgba(79,70,229,0.85)',
+      color: '#fff',
+      font: { size: 10, weight: '500' },
+      padding: { top: 4, bottom: 4, left: 8, right: 8 },
+      borderRadius: 4,
+      content: label,
+      position: 'start',
+      callout: { enabled: true, margin: 4, borderColor: color || 'rgba(79,70,229,0.85)', borderWidth: 1 }
+    };
+  }
+
+  const trafficAnnotations = {
+    aug25: makeAnnotation('Aug', 'Display campaign spike (+88K)', '#F59E0B', -50, -30),
+    sep25: makeAnnotation('Sep', 'Display peak (152K)', '#F59E0B', -20, 40),
+    oct25: makeAnnotation('Oct', 'Display campaign ends', '#EF4444', -80, 0),
+    mar26: makeAnnotation('Mar', 'Direct surge (+99K)', '#06B6D4', -50, 0)
+  };
+
+  charts.yoyTrafficLine = new Chart(document.getElementById('yoyTrafficLine'), {
+    type: 'line',
+    data: {
+      labels: monthLabels,
+      datasets: years.map(yr => ({
+        label: yr,
+        data: monthlyTotals(D.traffic.by_channel, yr),
+        borderColor: yearColors[yr],
+        backgroundColor: yearColors[yr] + '20',
+        borderWidth: yr === '2026' ? 3 : 2,
+        borderDash: yearDash[yr],
+        pointRadius: yr === '2026' ? 4 : 3,
+        pointBackgroundColor: yearColors[yr],
+        tension: 0.3,
+        spanGaps: false
+      }))
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, ticks: { callback: fmtN } } },
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + commaFmt(ctx.parsed.y) } },
+        annotation: { annotations: trafficAnnotations }
+      }
+    }
+  });
+
+  charts.yoyMqlLine = new Chart(document.getElementById('yoyMqlLine'), {
+    type: 'line',
+    data: {
+      labels: monthLabels,
+      datasets: years.map(yr => ({
+        label: yr,
+        data: monthlyTotals(mql.by_channel, yr),
+        borderColor: yearColors[yr],
+        backgroundColor: yearColors[yr] + '20',
+        borderWidth: yr === '2026' ? 3 : 2,
+        borderDash: yearDash[yr],
+        pointRadius: yr === '2026' ? 4 : 3,
+        pointBackgroundColor: yearColors[yr],
+        tension: 0.3,
+        spanGaps: false
+      }))
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true } },
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + commaFmt(ctx.parsed.y) } },
+        annotation: { annotations: {
+          sep24: makeAnnotation('Sep', 'Paid Search MQLs peak (+112)', '#06B6D4', -40, 0),
+          apr25: makeAnnotation('Apr', 'Paid Search spike (+106)', '#06B6D4', -70, 0),
+          mar26: makeAnnotation('Mar', 'MQLs drop despite traffic surge', '#EF4444', -40, 0)
+        }}
+      }
+    }
+  });
+
+  // ── Monthly CVR Line Chart (year overlay) ──
+  function monthlyCvr(yr) {
+    return allMonthSuffixes.map(s => {
+      const idx = D.months.indexOf(yr + s);
+      if (idx < 0) return null;
+      let totalTraffic = 0, totalMql = 0;
+      CHANNELS.forEach(ch => {
+        totalTraffic += (D.traffic.by_channel[ch] && D.traffic.by_channel[ch][idx]) || 0;
+        totalMql += (mql.by_channel[ch] && mql.by_channel[ch][idx]) || 0;
+      });
+      return totalTraffic > 0 ? (totalMql / totalTraffic * 100) : 0;
+    });
+  }
+
+  charts.yoyCvrLine = new Chart(document.getElementById('yoyCvrLine'), {
+    type: 'line',
+    data: {
+      labels: monthLabels,
+      datasets: years.map(yr => ({
+        label: yr,
+        data: monthlyCvr(yr),
+        borderColor: yearColors[yr],
+        backgroundColor: yearColors[yr] + '20',
+        borderWidth: yr === '2026' ? 3 : 2,
+        borderDash: yearDash[yr],
+        pointRadius: yr === '2026' ? 4 : 3,
+        pointBackgroundColor: yearColors[yr],
+        tension: 0.3,
+        spanGaps: false
+      }))
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, ticks: { callback: v => v.toFixed(2) + '%' } } },
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%' } },
+        annotation: { annotations: {
+          aug25: makeAnnotation('Aug', 'Display inflates traffic, dilutes CVR', '#F59E0B', -60, -30),
+          sep25: makeAnnotation('Sep', 'CVR low: Display traffic peak', '#F59E0B', -30, 40),
+          mar26: makeAnnotation('Mar', 'Direct surge dilutes CVR to 0.11%', '#EF4444', -60, 0)
+        }}
+      }
+    }
+  });
+}
+
+// Initialize
+initDateFilters();
+applyFilters();
+</script>
+</body>
+</html>
