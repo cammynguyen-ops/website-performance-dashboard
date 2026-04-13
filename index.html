@@ -826,7 +826,7 @@ function applyFilters() {
   const overallConvData = indices.map(i => {
     const t = activeCh.reduce((s,ch) => s + (D.traffic.by_channel[ch][i] || 0), 0);
     const m = activeCh.reduce((s,ch) => s + (mql.by_channel[ch][i] || 0), 0);
-    return t > 0 ? parseFloat((m / t * 100).toFixed(3)) : null;
+    return t > 0 ? parseFloat((m / t * 100).toFixed(2)) : null;
   });
   charts.convRateTotal = new Chart(document.getElementById('convRateTotal'), {
     type: 'line',
@@ -835,7 +835,7 @@ function applyFilters() {
       data: overallConvData,
       borderColor: '#4F46E5', backgroundColor: '#4F46E520', fill: true, tension: .3, pointRadius: 3, spanGaps: true
     }] },
-    options: { responsive:true, scales:{ y:{ ticks:{ callback: v => v + '%' }, title:{ display:true, text:'Conversion Rate' } } }, plugins:{ legend:{display:false} } }
+    options: { responsive:true, scales:{ y:{ ticks:{ callback: v => v.toFixed(2) + '%' }, title:{ display:true, text:'Conversion Rate' } } }, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ctx.parsed.y !== null ? ctx.parsed.y.toFixed(2) + '%' : '-' } } } }
   });
 
   // ── Top 10 Source / Medium Table ──
