@@ -291,6 +291,43 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   <div class="grid1">
     <div class="card"><h3>Funnel Conversion Rates by Channel</h3><canvas id="funnelChart"></canvas></div>
   </div>
+
+  <h2 style="font-size:18px;font-weight:700;margin:28px 0 12px;color:var(--text);border-bottom:2px solid var(--border);padding-bottom:8px;">Monthly Performance — Last 6 Months</h2>
+  <div class="grid1" style="margin-top:12px;">
+    <div class="card">
+      <h3>Direct — Last 6 Months</h3>
+      <div class="legend-note" style="margin-bottom:10px;">Rolling 6-month window ending at the last month in the selected date range. MQL/S2 metrics follow the selected attribution filter.</div>
+      <div style="overflow-x:auto;"><table class="funnel-table" id="ch6moTableDirect"></table></div>
+    </div>
+  </div>
+  <div class="grid1" style="margin-top:12px;">
+    <div class="card">
+      <h3>Paid Search — Last 6 Months</h3>
+      <div class="legend-note" style="margin-bottom:10px;">Rolling 6-month window ending at the last month in the selected date range. MQL/S2 metrics follow the selected attribution filter.</div>
+      <div style="overflow-x:auto;"><table class="funnel-table" id="ch6moTablePaidSearch"></table></div>
+    </div>
+  </div>
+  <div class="grid1" style="margin-top:12px;">
+    <div class="card">
+      <h3>Organic — Last 6 Months</h3>
+      <div class="legend-note" style="margin-bottom:10px;">Rolling 6-month window ending at the last month in the selected date range. MQL/S2 metrics follow the selected attribution filter.</div>
+      <div style="overflow-x:auto;"><table class="funnel-table" id="ch6moTableOrganic"></table></div>
+    </div>
+  </div>
+  <div class="grid1" style="margin-top:12px;">
+    <div class="card">
+      <h3>AI Search — Last 6 Months</h3>
+      <div class="legend-note" style="margin-bottom:10px;">Rolling 6-month window ending at the last month in the selected date range. MQL/S2 metrics follow the selected attribution filter.</div>
+      <div style="overflow-x:auto;"><table class="funnel-table" id="ch6moTableAISearch"></table></div>
+    </div>
+  </div>
+  <div class="grid1" style="margin-top:12px;">
+    <div class="card">
+      <h3>Referral — Last 6 Months</h3>
+      <div class="legend-note" style="margin-bottom:10px;">Rolling 6-month window ending at the last month in the selected date range. MQL/S2 metrics follow the selected attribution filter.</div>
+      <div style="overflow-x:auto;"><table class="funnel-table" id="ch6moTableReferral"></table></div>
+    </div>
+  </div>
 </div>
 
 <!-- YoY -->
@@ -890,6 +927,49 @@ function applyFilters() {
     },
     options: { responsive:true, scales:{ y:{ ticks:{callback:v=>v+'%'} } }, plugins:{ legend:{position:'bottom'} } }
   });
+
+  // ── Monthly Performance — Last 6 Months (per channel) ──
+  (function() {
+    var lastIdx = indices[indices.length - 1];
+    var sixIdx = [];
+    for (var i = Math.max(0, lastIdx - 5); i <= lastIdx; i++) sixIdx.push(i);
+    var sixMonths = sixIdx.map(function(i) { return D.months[i]; });
+    var tblHead = '<thead><tr><th>Metric</th>' + sixMonths.map(function(m){return '<th>'+shortMonth(m)+'</th>';}).join('') + '<th>Total</th></tr></thead>';
+
+    function sixArr(arr) { return sixIdx.map(function(i){return (arr && arr[i]) || 0;}); }
+
+    var channelConfigs = [
+      { ch: 'Direct', id: 'ch6moTableDirect' },
+      { ch: 'Paid Search', id: 'ch6moTablePaidSearch' },
+      { ch: 'Organic', id: 'ch6moTableOrganic' },
+      { ch: 'AI Search', id: 'ch6moTableAISearch' },
+      { ch: 'Referral', id: 'ch6moTableReferral' }
+    ];
+
+    channelConfigs.forEach(function(cfg) {
+      var ch = cfg.ch;
+      var trafficArr = sixArr(D.traffic.by_channel[ch]);
+      var mqlArr = sixArr(mql.by_channel[ch]);
+      var s2Arr = sixArr(s2.count_by_channel[ch]);
+      var acvArr = sixArr(s2.acv_by_channel[ch]);
+
+      var trafficTotal = trafficArr.reduce(function(s,v){return s+v;},0);
+      var mqlTotal = mqlArr.reduce(function(s,v){return s+v;},0);
+      var s2Total = s2Arr.reduce(function(s,v){return s+v;},0);
+      var acvTotal = acvArr.reduce(function(s,v){return s+v;},0);
+
+      var rows = [];
+      rows.push('<tr><td><strong>Traffic</strong></td>' + trafficArr.map(function(v){return '<td class="num">'+commaFmt(v)+'</td>';}).join('') + '<td class="num"><strong>'+commaFmt(trafficTotal)+'</strong></td></tr>');
+      rows.push('<tr><td><strong>MQL</strong></td>' + mqlArr.map(function(v){return '<td class="num">'+commaFmt(v)+'</td>';}).join('') + '<td class="num"><strong>'+commaFmt(mqlTotal)+'</strong></td></tr>');
+      rows.push('<tr><td><strong>MQL CVR</strong></td>' + trafficArr.map(function(t,j){return '<td class="num">'+(t>0?fmtPct(mqlArr[j]/t*100):'-')+'</td>';}).join('') + '<td class="num"><strong>'+(trafficTotal>0?fmtPct(mqlTotal/trafficTotal*100):'-')+'</strong></td></tr>');
+      rows.push('<tr><td><strong>S2</strong></td>' + s2Arr.map(function(v){return '<td class="num">'+commaFmt(v)+'</td>';}).join('') + '<td class="num"><strong>'+commaFmt(s2Total)+'</strong></td></tr>');
+      rows.push('<tr><td><strong>S2 CVR</strong></td>' + mqlArr.map(function(m,j){return '<td class="num">'+(m>0?fmtPct(s2Arr[j]/m*100):'-')+'</td>';}).join('') + '<td class="num"><strong>'+(mqlTotal>0?fmtPct(s2Total/mqlTotal*100):'-')+'</strong></td></tr>');
+      rows.push('<tr><td><strong>S2 Piped ACV</strong></td>' + acvArr.map(function(v){return '<td class="num">'+fmtD(v)+'</td>';}).join('') + '<td class="num"><strong>'+fmtD(acvTotal)+'</strong></td></tr>');
+
+      var el = document.getElementById(cfg.id);
+      if (el) el.innerHTML = tblHead + '<tbody>' + rows.join('') + '</tbody>';
+    });
+  })();
 
   // ── YoY YTD Table (3-year comparison) ──
   // Determine YTD period based on 2026 available months
